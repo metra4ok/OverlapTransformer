@@ -1,0 +1,48 @@
+FROM nvcr.io/nvidia/cuda:11.3.1-devel-ubuntu20.04
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# Install system dependencies for convinient development inside container
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
+    git \
+    curl \
+    wget \
+    vim \
+    sudo \
+    tar \
+    unzip \
+    openssh-server \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    python3-pip \
+    python3-tk \
+    python-is-python3 \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# upgrade pip
+RUN pip3 install --upgrade pip
+
+# install torch
+RUN pip3 install torch==1.10.2+cu113 torchvision==0.11.3+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+
+# install requirements
+COPY requirements.txt .
+RUN pip3 install -r requirements.txt && \
+    rm requirements.txt
+
+# add user and his password
+ARG USER=docker_overlaptransformer
+ARG UID=1000
+ARG GID=1000
+# default password
+ARG PW=user
+
+RUN useradd -m ${USER} --uid=${UID} && echo "${USER}:${PW}" | chpasswd && adduser ${USER} sudo
+WORKDIR /home/${USER}
+
+RUN mkdir OverlapTransformer && chown -R ${UID}:${GID} /home/${USER}
+RUN mkdir Datasets && chown -R ${UID}:${GID} /home/${USER}
+
+USER ${UID}:${GID}
